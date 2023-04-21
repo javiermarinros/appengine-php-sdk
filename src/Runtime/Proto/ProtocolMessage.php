@@ -27,7 +27,7 @@ namespace google\net;
  * Decoding methods can raise ProtocolBufferDecodeError if they couldn't
  * decode correctly, or the decoded message doesn't have all required fields.
  */
-abstract class ProtocolMessage {
+abstract class ProtocolMessage extends \stdClass {
   /**
    * Serializes the message and return it as a string.
    *

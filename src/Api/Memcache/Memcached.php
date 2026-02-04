@@ -121,7 +121,6 @@ class Memcached
     public function __construct($persistent_id = null)
     {
         $this->result_code = self::RES_SUCCESS;
-        require_once __DIR__ . '/Memcache.php';
         $this->memcache = new Memcache();
         $this->options = [self::OPT_COMPRESSION => false];
         $this->delayed_results = [];

@@ -67,18 +67,18 @@ class MemcacheUtils {
     $type_flag = $flag & self::FLAG_TYPE_MASK;
     switch ($type_flag) {
       case self::TYPE_BOOL:
-        return (boolean) $value;
+        return (bool) $value;
       case self::TYPE_FLOAT:
         if ($value === "INF") {
           return INF;
         } else if ($value === "-INF") {
           return -INF;
         } else {
-          return (double) $value;
+          return (float) $value;
         }
       case self::TYPE_INT:
       case self::TYPE_LONG:
-        return (integer) $value;
+        return (int) $value;
       case self::TYPE_STR:
       case self::TYPE_UNICODE:
         return $value;

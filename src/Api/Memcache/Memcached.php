@@ -859,6 +859,7 @@ class Memcached
 
         try {
             ApiProxy::makeSyncCall('memcache', 'Get', $request, $response);
+            $this->result_code = self::RES_SUCCESS;
         } catch (Error $e) {
             $this->result_code = self::RES_FAILURE;
             return false;

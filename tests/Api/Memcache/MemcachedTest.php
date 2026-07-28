@@ -716,6 +716,25 @@ class MemcachedTest extends ApiProxyTestBase {
   }
 
   public function testIncrementSuccess() {
+    // With an expiry, the item is first created with the ADD policy (which
+    // supports an expiration time, unlike the Increment API call). Here the
+    // item already exists, so the add is not stored.
+    $add_request = new MemcacheSetRequest();
+    $item = $add_request->addItem();
+    $item->setKey("key");
+    $item->setValue("500");
+    $item->setFlags(3);  // int
+    $item->setSetPolicy(SetPolicy::ADD);
+    $item->setExpirationTime(30);
+
+    $add_response = new MemcacheSetResponse();
+    $add_response->addSetStatus(SetStatusCode::NOT_STORED);
+
+    $this->apiProxyMock->expectCall('memcache',
+                                    'Set',
+                                    $add_request,
+                                    $add_response);
+
     $request = new MemcacheIncrementRequest();
     $request->setKey("key");
     $request->setDelta(5);
@@ -733,7 +752,78 @@ class MemcachedTest extends ApiProxyTestBase {
     $this->apiProxyMock->verify();
   }
 
+  public function testIncrementWithoutExpirySuccess() {
+    // Without an expiry a single Increment call is issued, as before.
+    $request = new MemcacheIncrementRequest();
+    $request->setKey("key");
+    $request->setDelta(5);
+    $request->setInitialValue(500);
+
+    $response = new MemcacheIncrementResponse();
+    $response->setNewValue(7);
+
+    $this->apiProxyMock->expectCall('memcache',
+                                    'Increment',
+                                    $request,
+                                    $response);
+    $memcached = new Memcached();
+    $this->assertEquals(7, $memcached->increment("key", 5, 500));
+    $this->apiProxyMock->verify();
+  }
+
+  public function testIncrementWithExpiryCreatesItem() {
+    // The item does not exist: add() stores the initial value with the
+    // requested expiration, and the increment is applied on top of it.
+    $add_request = new MemcacheSetRequest();
+    $item = $add_request->addItem();
+    $item->setKey("key");
+    $item->setValue("500");
+    $item->setFlags(3);  // int
+    $item->setSetPolicy(SetPolicy::ADD);
+    $item->setExpirationTime(30);
+
+    $add_response = new MemcacheSetResponse();
+    $add_response->addSetStatus(SetStatusCode::STORED);
+
+    $this->apiProxyMock->expectCall('memcache',
+                                    'Set',
+                                    $add_request,
+                                    $add_response);
+
+    $request = new MemcacheIncrementRequest();
+    $request->setKey("key");
+    $request->setDelta(5);
+    $request->setInitialValue(500);
+
+    $response = new MemcacheIncrementResponse();
+    $response->setNewValue(505);
+
+    $this->apiProxyMock->expectCall('memcache',
+                                    'Increment',
+                                    $request,
+                                    $response);
+    $memcached = new Memcached();
+    $this->assertEquals(505, $memcached->increment("key", 5, 500, 30));
+    $this->apiProxyMock->verify();
+  }
+
   public function testDecrementSuccess() {
+    $add_request = new MemcacheSetRequest();
+    $item = $add_request->addItem();
+    $item->setKey("widgets_key");
+    $item->setValue("500");
+    $item->setFlags(3);  // int
+    $item->setSetPolicy(SetPolicy::ADD);
+    $item->setExpirationTime(30);
+
+    $add_response = new MemcacheSetResponse();
+    $add_response->addSetStatus(SetStatusCode::NOT_STORED);
+
+    $this->apiProxyMock->expectCall('memcache',
+                                    'Set',
+                                    $add_request,
+                                    $add_response);
+
     $request = new MemcacheIncrementRequest();
     $request->setKey("widgets_key");
     $request->setDelta(5);

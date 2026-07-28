@@ -997,7 +997,8 @@ class Memcached {
    * @param string $key The key of the item to increment
    * @param int $offset The amount by which to increment the item's value
    * @param int $initial_value The value to set the item to if it doesn't exist.
-   * @param int $expiry The expiry time to set on the item.
+   * @param int $expiry The expiry time to set on the item, applied only when
+   * the item does not exist yet.
    * @param bool $is_incr Whether to perform an increment or decrement.
    *
    * @return The new item's value on success or false on failure.
@@ -1010,6 +1011,14 @@ class Memcached {
     // Sending of a key of 'null' or an unset value is a failure.
     if (is_null($key)) {
       return false;
+    }
+
+    // The Increment API call has no expiration field, so an item it creates
+    // through initial_value never expires. To honor $expiry, create the item
+    // first using the Set API with the ADD policy, which does support an
+    // expiration and fails without side effects when the item already exists.
+    if ($expiry != 0) {
+      $this->add($key, $initial_value, $expiry);
     }
 
     $key = $this->getPrefixKey($key);

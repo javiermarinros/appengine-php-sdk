@@ -300,6 +300,51 @@ class MemcachedTest extends ApiProxyTestBase {
     $this->apiProxyMock->verify();
   }
 
+  public function testGetMultiClearsPreviousResultCode() {
+    // A failed add() leaves RES_NOTSTORED as the current result code.
+    $add_request = new MemcacheSetRequest();
+    $item = $add_request->addItem();
+    $item->setKey("lock");
+    $item->setValue("1");
+    $item->setFlags(3);  // int
+    $item->setSetPolicy(SetPolicy::ADD);
+    $item->setExpirationTime(30);
+
+    $add_response = new MemcacheSetResponse();
+    $add_response->addSetStatus(SetStatusCode::NOT_STORED);
+
+    $this->apiProxyMock->expectCall('memcache',
+                                    'Set',
+                                    $add_request,
+                                    $add_response);
+
+    $request = new MemcacheGetRequest();
+    $request->addKey("key");
+    $request->setForCas(true);
+
+    $response = new MemcacheGetResponse();
+    $item = $response->addItem();
+    $item->setKey("key");
+    $item->setValue("value");
+    $item->setFlags(0);  // string.
+    $item->setCasId(123456);
+
+    $this->apiProxyMock->expectCall('memcache',
+                                    'Get',
+                                    $request,
+                                    $response);
+
+    $memcached = new Memcached();
+    $this->assertFalse($memcached->add("lock", 1, 30));
+    $this->assertEquals($memcached->getResultCode(), Memcached::RES_NOTSTORED);
+
+    // A successful getMulti() must not report the stale RES_NOTSTORED.
+    $result = $memcached->getMulti(["key"], $cas_tokens);
+    $this->assertEquals("value", $result["key"]);
+    $this->assertEquals($memcached->getResultCode(), Memcached::RES_SUCCESS);
+    $this->apiProxyMock->verify();
+  }
+
   public function testPeekMultiSuccess() {
     $request = new MemcacheGetRequest();
     $request->addKey("key");

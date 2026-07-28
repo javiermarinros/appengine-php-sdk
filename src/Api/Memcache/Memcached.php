@@ -794,6 +794,11 @@ class Memcached {
       return false;
     }
 
+    // The call succeeded: update the result code so that a stale value left
+    // by a previous operation (e.g. RES_NOTSTORED from a failed add()) is
+    // not reported for this successful multi-get.
+    $this->result_code = self::RES_SUCCESS;
+
     $return_value = array();
     foreach ($response->getItemList() as $item) {
       try {
